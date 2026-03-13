@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>基础模板</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sidebar: { DEFAULT: '#18181b', hover: '#27272a', active: '#3f3f46', border: '#3f3f46', text: '#a1a1aa', textActive: '#ffffff' },
+            primary: { DEFAULT: '#3b82f6', hover: '#2563eb', light: '#eff6ff' },
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body style="margin:0;" class="bg-gray-50 text-gray-800">
+  <div id="root"></div>
+  <script type="text/babel">
+const { useState } = React;
+
+// ─── 菜单配置（可替换） ──────────────────────────────────────────────
+const MENU = [
+  {
+    group: '概览',
+    items: [
+      { key: 'dashboard', label: '数据看板', icon: '▦' },
+    ]
+  },
+  {
+    group: '基础配置',
+    items: [
+      { key: 'channels',   label: '渠道管理',   icon: '◈' },
+      { key: 'accounts',   label: '账号管理',   icon: '⊞', active: true },
+      { key: 'fields',     label: '字段配置',   icon: '≡' },
+    ]
+  },
+  {
+    group: '运营',
+    items: [
+      { key: 'credentials', label: '凭证录入',  icon: '🔑' },
+      { key: 'audit',       label: '操作日志',  icon: '📋' },
+    ]
+  },
+  {
+    group: '系统',
+    items: [
+      { key: 'settings', label: '系统设置', icon: '⚙' },
+    ]
+  },
+];
+
+// ─── Mock 数据（可替换） ──────────────────────────────────────────────
+const MOCK_DATA = [
+  { id: 1, name: '示例项目 A', type: '类型一', status: 'active',  tag: '标签X', updated: '2026-03-01', operator: '张三' },
+  { id: 2, name: '示例项目 B', type: '类型二', status: 'inactive',tag: '标签Y', updated: '2026-02-20', operator: '李四' },
+  { id: 3, name: '示例项目 C', type: '类型一', status: 'active',  tag: '标签X', updated: '2026-02-15', operator: '张三' },
+  { id: 4, name: '示例项目 D', type: '类型三', status: 'pending', tag: '标签Z', updated: '2026-02-10', operator: '王五' },
+  { id: 5, name: '示例项目 E', type: '类型二', status: 'active',  tag: '标签Y', updated: '2026-02-08', operator: '李四' },
+  { id: 6, name: '示例项目 F', type: '类型一', status: 'inactive',tag: '标签X', updated: '2026-01-30', operator: '张三' },
+  { id: 7, name: '示例项目 G', type: '类型三', status: 'active',  tag: '标签Z', updated: '2026-01-25', operator: '王五' },
+  { id: 8, name: '示例项目 H', type: '类型二', status: 'pending', tag: '标签Y', updated: '2026-01-20', operator: '李四' },
+];
+
+const PAGE_SIZE = 6;
+
+// ─── 状态配置 ─────────────────────────────────────────────────────────
+const STATUS_MAP = {
+  active:   { label: '已启用', cls: 'bg-green-50 text-green-700 border border-green-200' },
+  inactive: { label: '已停用', cls: 'bg-gray-100 text-gray-500 border border-gray-200' },
+  pending:  { label: '待审核', cls: 'bg-yellow-50 text-yellow-700 border border-yellow-200' },
+};
+
+// ─── 组件 ─────────────────────────────────────────────────────────────
+function Sidebar({ activeKey, onSelect }) {
+  return (
+    <aside className="w-52 flex-shrink-0 flex flex-col h-screen bg-[#18181b] text-zinc-400 overflow-y-auto">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-4 py-4 border-b border-zinc-800">
+        <div className="w-7 h-7 bg-blue-500 rounded-md flex items-center justify-center text-white text-sm font-bold">◈</div>
+        <span className="text-white text-sm font-semibold">财务后台</span>
+      </div>
+
+      {/* Menu */}
+      <nav className="flex-1 py-3 overflow-y-auto">
+        {MENU.map(({ group, items }) => (
+          <div key={group} className="mb-2">
+            <div className="px-4 py-1.5 text-xs font-medium text-zinc-600 uppercase tracking-wider">{group}</div>
+            {items.map(item => {
+              const isActive = item.key === activeKey;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => onSelect(item.key)}
+                  className={`w-full flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
+                    isActive
+                      ? 'bg-zinc-700 text-white'
+                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                  }`}
+                >
+                  <span className="text-base w-5 text-center">{item.icon}</span>
+                  {item.label}
+                  {isActive && <span className="ml-auto w-1 h-4 bg-blue-500 rounded-full"></span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      {/* User */}
+      <div className="px-4 py-3 border-t border-zinc-800 flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-semibold">张</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-zinc-200 text-xs font-medium">张三</div>
+          <div className="text-zinc-500 text-xs truncate">财务运维</div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function StatusBadge({ status }) {
+  const cfg = STATUS_MAP[status] || STATUS_MAP.pending;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${status === 'active' ? 'bg-green-500' : status === 'inactive' ? 'bg-gray-400' : 'bg-yellow-500'}`}></span>
+      {cfg.label}
+    </span>
+  );
+}
+
+function Modal({ title, onClose, children, footer }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-2xl w-[480px] overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <span className="font-semibold text-gray-800">{title}</span>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+        <div className="px-5 py-4">{children}</div>
+        {footer && <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function Toast({ msg, type }) {
+  if (!msg) return null;
+  const bg = type === 'success' ? 'bg-green-600' : 'bg-gray-800';
+  return (
+    <div className={`fixed top-4 left-1/2 -translate-x-1/2 ${bg} text-white text-sm px-5 py-2.5 rounded-lg shadow-lg z-[9999] transition-all`}>
+      {msg}
+    </div>
+  );
+}
+
+// ─── 主内容区 ──────────────────────────────────────────────────────────
+function MainContent({ pageTitle, pageDesc }) {
+  const [search, setSearch]     = useState('');
+  const [filterType, setFilterType]   = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [page, setPage]         = useState(1);
+  const [selected, setSelected] = useState([]);
+  const [modal, setModal]       = useState(null); // null | 'add' | 'edit' | 'delete'
+  const [editRow, setEditRow]   = useState(null);
+  const [toast, setToast]       = useState({ msg: '', type: '' });
+  const [data, setData]         = useState(MOCK_DATA);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast({ msg: '', type: '' }), 2200);
+  };
+
+  // 筛选
+  const filtered = data.filter(r => {
+    if (search && !r.name.includes(search)) return false;
+    if (filterType && r.type !== filterType) return false;
+    if (filterStatus && r.status !== filterStatus) return false;
+    return true;
+  });
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const toggleSelect = id => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+  const toggleAll = () => setSelected(s => s.length === paginated.length ? [] : paginated.map(r => r.id));
+
+  const handleDelete = (row) => { setEditRow(row); setModal('delete'); };
+  const handleEdit   = (row) => { setEditRow({ ...row }); setModal('edit'); };
+  const confirmDelete = () => {
+    setData(d => d.filter(r => r.id !== editRow.id));
+    setModal(null);
+    showToast('✓ 已删除');
+  };
+  const confirmEdit = () => {
+    setData(d => d.map(r => r.id === editRow.id ? editRow : r));
+    setModal(null);
+    showToast('✓ 修改已保存');
+  };
+  const confirmAdd = () => {
+    const newId = Math.max(...data.map(r => r.id)) + 1;
+    setData(d => [...d, { ...editRow, id: newId, updated: new Date().toISOString().slice(0, 10), operator: '张三' }]);
+    setModal(null);
+    showToast('✓ 已新增');
+  };
+
+  return (
+    <main className="flex-1 flex flex-col overflow-hidden">
+      {/* 页头 */}
+      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+        <div>
+          <h1 className="text-base font-semibold text-gray-900">{pageTitle}</h1>
+          {pageDesc && <p className="text-xs text-gray-400 mt-0.5">{pageDesc}</p>}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto px-6 py-4">
+
+        {/* ── 筛选条 ── */}
+        <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 mb-3 flex flex-wrap items-center gap-3">
+          {/* 搜索框 */}
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 h-8 focus-within:border-blue-400 focus-within:bg-white transition-colors">
+            <span className="text-gray-400 text-sm">🔍</span>
+            <input
+              className="bg-transparent text-sm outline-none w-44 placeholder:text-gray-400"
+              placeholder="搜索名称..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
+          {/* 类型筛选 */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500">类型</span>
+            <select
+              className="h-8 border border-gray-200 rounded-md px-2 text-sm bg-white focus:outline-none focus:border-blue-400"
+              value={filterType}
+              onChange={e => { setFilterType(e.target.value); setPage(1); }}
+            >
+              <option value="">全部</option>
+              <option>类型一</option><option>类型二</option><option>类型三</option>
+            </select>
+          </div>
+          {/* 状态筛选 */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500">状态</span>
+            <select
+              className="h-8 border border-gray-200 rounded-md px-2 text-sm bg-white focus:outline-none focus:border-blue-400"
+              value={filterStatus}
+              onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
+            >
+              <option value="">全部</option>
+              <option value="active">已启用</option>
+              <option value="inactive">已停用</option>
+              <option value="pending">待审核</option>
+            </select>
+          </div>
+          {/* 重置 */}
+          {(search || filterType || filterStatus) && (
+            <button
+              onClick={() => { setSearch(''); setFilterType(''); setFilterStatus(''); setPage(1); }}
+              className="text-xs text-blue-500 hover:text-blue-700"
+            >重置</button>
+          )}
+          <span className="ml-auto text-xs text-gray-400">共 {total} 条</span>
+        </div>
+
+        {/* ── 操作按钮组 ── */}
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => { setEditRow({ name:'', type:'类型一', status:'active', tag:'', operator:'' }); setModal('add'); }}
+            className="flex items-center gap-1.5 px-3 h-8 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-md transition-colors"
+          >
+            <span className="text-base leading-none">＋</span> 新增
+          </button>
+          <button
+            onClick={() => showToast('已导出 Excel')}
+            className="flex items-center gap-1.5 px-3 h-8 bg-white border border-gray-200 hover:border-blue-400 hover:text-blue-500 text-sm text-gray-600 rounded-md transition-colors"
+          >
+            ↓ 导出
+          </button>
+          {selected.length > 0 && (
+            <button
+              onClick={() => { setData(d => d.filter(r => !selected.includes(r.id))); setSelected([]); showToast(`✓ 已删除 ${selected.length} 条`); }}
+              className="flex items-center gap-1.5 px-3 h-8 bg-white border border-red-200 hover:bg-red-50 text-red-500 text-sm rounded-md transition-colors"
+            >
+              🗑 删除所选 ({selected.length})
+            </button>
+          )}
+        </div>
+
+        {/* ── 数据表格 ── */}
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="w-10 px-4 py-3">
+                  <input type="checkbox" className="rounded" checked={selected.length === paginated.length && paginated.length > 0} onChange={toggleAll} />
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">名称</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">类型</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">状态</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">标签</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">最后更新</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">操作人</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {paginated.length === 0 ? (
+                <tr><td colSpan={8} className="text-center py-12 text-gray-400 text-sm">暂无数据</td></tr>
+              ) : paginated.map(row => (
+                <tr key={row.id} className={`hover:bg-gray-50 transition-colors ${selected.includes(row.id) ? 'bg-blue-50' : ''}`}>
+                  <td className="px-4 py-3">
+                    <input type="checkbox" className="rounded" checked={selected.includes(row.id)} onChange={() => toggleSelect(row.id)} />
+                  </td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{row.name}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">{row.type}</span>
+                  </td>
+                  <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{row.tag}</td>
+                  <td className="px-4 py-3 text-gray-400 text-xs">{row.updated}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{row.operator}</td>
+                  <td className="px-4 py-3">
+                    {/* 行右侧操作按钮 */}
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => handleEdit(row)}
+                        className="px-2.5 py-1 text-xs text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                      >编辑</button>
+                      <span className="text-gray-200">|</span>
+                      <button
+                        onClick={() => showToast('已查看详情')}
+                        className="px-2.5 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded transition-colors"
+                      >详情</button>
+                      <span className="text-gray-200">|</span>
+                      <button
+                        onClick={() => handleDelete(row)}
+                        className="px-2.5 py-1 text-xs text-red-400 hover:bg-red-50 rounded transition-colors"
+                      >删除</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── 分页 ── */}
+        <div className="flex items-center justify-between mt-3 px-1">
+          <span className="text-xs text-gray-400">第 {Math.min((page - 1) * PAGE_SIZE + 1, total)}–{Math.min(page * PAGE_SIZE, total)} 条，共 {total} 条</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(1)} disabled={page === 1}
+              className="w-8 h-8 flex items-center justify-center text-xs rounded border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            >«</button>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="w-8 h-8 flex items-center justify-center text-xs rounded border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            >‹</button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .reduce((acc, p, idx, arr) => {
+                if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) => p === '...'
+                ? <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">…</span>
+                : <button key={p} onClick={() => setPage(p)}
+                    className={`w-8 h-8 flex items-center justify-center text-xs rounded border transition-colors ${
+                      p === page
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-500'
+                    }`}>{p}</button>
+              )
+            }
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="w-8 h-8 flex items-center justify-center text-xs rounded border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            >›</button>
+            <button
+              onClick={() => setPage(totalPages)} disabled={page === totalPages}
+              className="w-8 h-8 flex items-center justify-center text-xs rounded border border-gray-200 text-gray-500 hover:border-blue-400 hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            >»</button>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── Modal: 新增/编辑 ── */}
+      {(modal === 'add' || modal === 'edit') && (
+        <Modal
+          title={modal === 'add' ? '新增记录' : '编辑记录'}
+          onClose={() => setModal(null)}
+          footer={<>
+            <button onClick={() => setModal(null)} className="px-4 h-8 text-sm border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600">取消</button>
+            <button onClick={modal === 'add' ? confirmAdd : confirmEdit} className="px-4 h-8 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md">确认</button>
+          </>}
+        >
+          <div className="space-y-3">
+            {[
+              { label: '名称', key: 'name', type: 'text' },
+            ].map(({ label, key, type }) => (
+              <div key={key} className="flex flex-col gap-1">
+                <label className="text-xs text-gray-500">{label}</label>
+                <input
+                  type={type}
+                  className="h-9 border border-gray-200 rounded-md px-3 text-sm focus:outline-none focus:border-blue-400"
+                  value={editRow?.[key] || ''}
+                  onChange={e => setEditRow(r => ({ ...r, [key]: e.target.value }))}
+                />
+              </div>
+            ))}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500">类型</label>
+              <select className="h-9 border border-gray-200 rounded-md px-3 text-sm focus:outline-none focus:border-blue-400 bg-white"
+                value={editRow?.type || '类型一'}
+                onChange={e => setEditRow(r => ({ ...r, type: e.target.value }))}>
+                <option>类型一</option><option>类型二</option><option>类型三</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500">状态</label>
+              <select className="h-9 border border-gray-200 rounded-md px-3 text-sm focus:outline-none focus:border-blue-400 bg-white"
+                value={editRow?.status || 'active'}
+                onChange={e => setEditRow(r => ({ ...r, status: e.target.value }))}>
+                <option value="active">已启用</option>
+                <option value="inactive">已停用</option>
+                <option value="pending">待审核</option>
+              </select>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modal: 删除确认 ── */}
+      {modal === 'delete' && (
+        <Modal
+          title="确认删除"
+          onClose={() => setModal(null)}
+          footer={<>
+            <button onClick={() => setModal(null)} className="px-4 h-8 text-sm border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600">取消</button>
+            <button onClick={confirmDelete} className="px-4 h-8 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md">确认删除</button>
+          </>}
+        >
+          <div className="text-sm text-gray-600">
+            确定要删除 <strong className="text-gray-900">「{editRow?.name}」</strong> 吗？此操作不可撤销。
+          </div>
+        </Modal>
+      )}
+
+      <Toast msg={toast.msg} type={toast.type} />
+    </main>
+  );
+}
+
+// ─── App Root ──────────────────────────────────────────────────────────
+function App() {
+  const [activeKey, setActiveKey] = useState('accounts');
+
+  const PAGE_INFO = {
+    dashboard:   { title: '数据看板',   desc: '核心指标一览' },
+    channels:    { title: '渠道管理',   desc: '管理所有接入渠道' },
+    accounts:    { title: '账号管理',   desc: '管理各渠道账号信息' },
+    fields:      { title: '字段配置',   desc: '自定义各渠道字段' },
+    credentials: { title: '凭证录入',   desc: '录入并维护各渠道凭证' },
+    audit:       { title: '操作日志',   desc: '查看所有操作记录' },
+    settings:    { title: '系统设置',   desc: '全局参数配置' },
+  };
+  const info = PAGE_INFO[activeKey] || PAGE_INFO.accounts;
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      <Sidebar activeKey={activeKey} onSelect={setActiveKey} />
+      <MainContent pageTitle={info.title} pageDesc={info.desc} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
